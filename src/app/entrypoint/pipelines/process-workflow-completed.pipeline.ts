@@ -1,22 +1,22 @@
 import {Context, WaterfallPipeline} from "@boost/pipeline";
-import {ContextEntity, LoggerInterface} from "bridge-mix/lib/types";
-import {dayjs, Logger, logger} from "bridge-mix";
 
 import * as slackService from "../../../services/slack.service";
 import {ChatPostMessageArguments} from "@slack/web-api";
-import {DeployEntity, DeployStatus} from "../deploy.entity";
-import deployRepository from "../deploy.repository";
+import {DeployEntity, DeployStatus} from "../entity";
+import deployRepository from "../repository";
+import {RequestEntity} from "../../../common/entities";
+import dayjs from "dayjs";
+import logger from "../../../common/logger";
 
 interface ProcessJobCompletedPipelineInput {
-    context: ContextEntity
+    request: RequestEntity
     event?: any
-    logger?: LoggerInterface
     deployEntity?: DeployEntity
     status?: DeployStatus
 }
 
 class ProcessWorkflowCompletedPipeline {
-    constructor(private readonly context: ContextEntity ) {}
+    constructor(private readonly request: RequestEntity ) {}
 
     async getDeployEntity(_: Context, input: ProcessJobCompletedPipelineInput){
         input.deployEntity = await deployRepository.findOne({pipelineId: input.event.pipeline.id});
@@ -69,9 +69,8 @@ class ProcessWorkflowCompletedPipeline {
 
     run() {
         const input: ProcessJobCompletedPipelineInput = {
-            context: this.context,
-            logger: this.context.logger,
-            event: this.context.request.body
+            request: this.request,
+            event: this.request.body
         };
 
         new WaterfallPipeline(new Context(), input)
@@ -79,7 +78,7 @@ class ProcessWorkflowCompletedPipeline {
             .pipe("sendSlackMessage", this.sendSlackMessage)
             .pipe("updateDeployRecordWithCircleCIWorkflowStatus", this.updateDeployRecordWithCircleCIWorkflowStatus)
             .run()
-            .catch(error => input.logger.exception(error));
+            .catch(error => logger.error(error.message));
     }
 }
 

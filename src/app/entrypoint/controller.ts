@@ -15,6 +15,26 @@ export const processCommand = async (req: express.Request, res: express.Response
         params: req.params,
     });
 
+    console.log("Response", data, error, statusCode);
+
+    if (error) return response.error(res, error, statusCode);
+
+    return response.success(res, data, statusCode);
+};
+
+export const processWebhook = async (req: express.Request, res: express.Response) => {
+    const {
+        error,
+        statusCode,
+        data
+    } = await service.processWebhook({
+        body: req.body,
+        query: req.query,
+        headers: req.headers,
+        params: req.params,
+    });
+
+
     if (error) return response.error(res, error, statusCode);
 
     return response.success(res, data, statusCode);

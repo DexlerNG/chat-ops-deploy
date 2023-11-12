@@ -29,7 +29,8 @@ const env = {
 
 
   defaultChatProvider: process.env.DEFAULT_CHAT_PROVIDER,
-  defaultRepoProvider: process.env.DEFAULT_REPO_PROVIDER
+  defaultRepoProvider: process.env.DEFAULT_REPO_PROVIDER,
+  defaultCICDProvider: process.env.DEFAULT_CICD_PROVIDER
 
 };
 

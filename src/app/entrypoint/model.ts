@@ -2,6 +2,9 @@
 import  { Schema, model } from "mongoose";
 import { DeployStatus } from "./entity";
 const schema: Schema = new Schema({
+    chatProvider: {type: String},
+    repoProvider: {type: String},
+    CICDProvider: {type: String},
     channel: {
         type: String
     },

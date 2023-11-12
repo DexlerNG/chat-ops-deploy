@@ -10,6 +10,7 @@ export function register(app: express.Application) {
     app.all("/v1/process-command", entrypointController.processCommand);
     app.all("/v1/process-command/:chatProvider", entrypointController.processCommand);
     app.all("/v1/process-command/:chatProvider/:repoProvider", entrypointController.processCommand);
+    app.all("/v1/process-webhook/:chatProvider", entrypointController.processWebhook);
 }
 
 

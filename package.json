@@ -25,6 +25,7 @@
     "@slack/webhook": "^6.1.0",
     "axios": "^1.6.1",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.10",
     "dotenv": "^8.6.0",
     "express": "~4.18.2",
     "express-mongo-sanitize": "^2.1.0",
@@ -44,6 +45,7 @@
     "supertest": "^4.0.2",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.6.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "yargs": "^17.7.2"
   }
 }

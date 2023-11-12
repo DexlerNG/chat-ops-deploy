@@ -1,10 +1,4 @@
-import {FunctionResponseDTO, RequestEntity} from "../../common/entities";
 
-
-export interface DeployInterface{
-    processVerification(request: RequestEntity): Promise<FunctionResponseDTO<string>>
-    processCommand(request: RequestEntity): Promise<FunctionResponseDTO<string>>
-}
 export enum DeployStatus {
     processing = "processing",
     failed = "failed",
@@ -16,8 +10,9 @@ export class DeployEntity{
     id?: string;
     chatProvider: string
     repoProvider: string
+    CICDProvider: string
     channel?: string;
-    text: string;
+    command: string;
     service: string;
     env: string;
     branch: string;

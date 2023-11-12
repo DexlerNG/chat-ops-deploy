@@ -1,23 +1,22 @@
 import {Context, WaterfallPipeline} from "@boost/pipeline";
-import {ContextEntity, LoggerInterface} from "bridge-mix/lib/types";
-import {dayjs, Logger, logger} from "bridge-mix";
 
 import * as slackService from "../../../services/slack.service";
 import * as circleciService from "../../../services/circleci.service";
 import {ChatPostMessageArguments} from "@slack/web-api";
-import {DeployEntity, DeployStatus} from "../deploy.entity";
-import {ExecuteDeployCommandDTO} from "../deploy.dto";
-import deployRepository from "../deploy.repository";
-import {SlackUser} from "../../../common/entities";
+import {DeployEntity, DeployStatus} from "../entity";
+import deployRepository from "../repository";
+import {RequestEntity} from "../../../common/entities";
+import logger from "../../../common/logger";
+import dayjs from "dayjs";
+
 interface ProcessJobCompletedPipelineInput {
-    context: ContextEntity
+    request: RequestEntity
     event?: any
-    logger?: LoggerInterface
     deployEntity?: DeployEntity
 }
 
 class ProcessJobCompletedPipeline {
-    constructor(private readonly context: ContextEntity ) {}
+    constructor(private readonly request: RequestEntity ) {}
 
     async getDeployEntity(_: Context, input: ProcessJobCompletedPipelineInput){
         input.deployEntity = await deployRepository.findOne({pipelineId: input.event.pipeline.id});
@@ -64,16 +63,15 @@ class ProcessJobCompletedPipeline {
 
     run() {
         const input: ProcessJobCompletedPipelineInput = {
-            context: this.context,
-            logger: this.context.logger,
-            event: this.context.request.body
+            request: this.request,
+            event: this.request.body
         };
 
         new WaterfallPipeline(new Context(), input)
             .pipe("getDeployEntity", this.getDeployEntity)
             .pipe("sendSlackMessage", this.sendSlackMessage)
             .run()
-            .catch(error => input.logger.exception(error));
+            .catch(error => logger.error(error.messages));
     }
 }
 
