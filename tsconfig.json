@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "allowJs": true,
+    "sourceMap": true,
+    "checkJs": true,
+    "outDir": "./dist",
+    "strict": false,
+    "esModuleInterop": true,
+    "incremental": true,
+    "types": ["node", "jest"],
+    "skipLibCheck": true
+  },
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Recommended",
+  "include": ["src", "bin/*", "src/routes/*"],
+  "exclude": ["node_modules", "**/*.spec.ts"],
+  "typeRoots": ["./node_modules/@types", "./typings"],
+  "types": ["reflect-metadata","jest"]
+}

@@ -1,0 +1,49 @@
+{
+  "name": "chat-ops-deploy",
+  "version": "0.0.0",
+  "description": "",
+  "main": "src/server.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "ts-node ./src/server.ts",
+    "test": "jest --verbose -c jest.config.js",
+    "start:http": "node --trace-deprecation ./dist/server.js"
+  },
+  "keywords": [
+    "slack",
+    "circle-ci",
+    "github"
+  ],
+  "author": {
+    "email": "michealakinwonmi@gmail.com",
+    "name": "Micheal Akinwonmi"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@boost/pipeline": "^4.0.1",
+    "@slack/web-api": "^6.9.0",
+    "@slack/webhook": "^6.1.0",
+    "axios": "^1.6.1",
+    "cors": "^2.8.5",
+    "dotenv": "^8.6.0",
+    "express": "~4.18.2",
+    "express-mongo-sanitize": "^2.1.0",
+    "helmet": "^7.0.0",
+    "mongoose": "^5.9.13",
+    "morgan": "^1.10.0",
+    "nanoid": "^3.3.4",
+    "winston": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/express-useragent": "^1.0.2",
+    "@types/jest": "^29.4.0",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^18.7.1",
+    "jest": "^29.5.6",
+    "supertest": "^4.0.2",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.6.0",
+    "typescript": "^4.7.4"
+  }
+}
