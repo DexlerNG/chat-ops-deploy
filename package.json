@@ -28,7 +28,6 @@
     "dayjs": "^1.11.10",
     "dotenv": "^8.6.0",
     "express": "~4.18.2",
-    "express-mongo-sanitize": "^2.1.0",
     "helmet": "^7.0.0",
     "mongoose": "^5.9.13",
     "morgan": "^1.10.0",

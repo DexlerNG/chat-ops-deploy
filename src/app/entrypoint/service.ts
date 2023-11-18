@@ -118,7 +118,6 @@ export const processCommand = async (request: RequestEntity) => {
     }
 }
 
-
 export const processWebhook = async (request: RequestEntity) => {
 
     console.log("Broker Payload", JSON.stringify(request.body), request.params);
