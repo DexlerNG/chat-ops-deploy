@@ -24,8 +24,6 @@ const execute = async () => {
         if(project.username !== env.circleciOrg) continue;
 
         await processWebhook(project);
-        //get webhooks for each project
-        // const webhooksResponse = await circleciService.getWebhooks(project.reponame);
     }
     process.exit(0);
 };
