@@ -1,6 +1,9 @@
 # Chat Ops Deploy
 This is a backend service that aims connects to connect multiple chat platforms and provide a common interface to deploy applications from a chat platform to a CI/CI platform running your deployment script.
 
+## Supported Commands
+- deploy <repo-name> <environment> <branch-name> 
+
 ## Supported Chat Platforms
 - Slack
 
