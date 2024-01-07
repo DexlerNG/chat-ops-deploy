@@ -35,6 +35,5 @@ jobs:
           docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM
       - kubernetes/install-kubectl
       - run: |
-          echo $KUBE_CONFIG | base64 -d > kubeconfig.yml
           sed -i "s|{{image}}|$DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM|g" deploy/kubernetes.yaml
-          kubectl --kubeconfig kubeconfig.yml apply -n infra -f deploy/kubernetes.yaml
+          kubectl apply -n infra -f deploy/kubernetes.yaml
