@@ -39,5 +39,5 @@ This is a backend service that aims connects to connect multiple chat platforms 
 
 ### CircleCI Requirements
 - Create a CircleCI API Token
-- Run the script `ts-node ./src/app/entrypoint/commands/sync-circleci-webhooks.script.ts` to sync the webhooks to your circleci projects. This is basically just pulling all your projects and adding a webhook to them
+- Run the script `ts-node ./src/app/entrypoint/commands/sync-all-circleci-webhooks.script.ts` to sync the webhooks to your circleci projects. This is basically just pulling all your projects and adding a webhook to them
 - The url to the webhook is `https://<your-host>/v1/process-webhook/?:CICDProvider`

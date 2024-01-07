@@ -10,27 +10,29 @@ const argv: any = yargs(hideBin(process.argv)).argv
 
 const execute = async () => {
 
-    if(!argv.project) throw new Error("Project is required")
+    if(!argv.project) throw new Error("Project is required");
+
     if(!argv.webhook) throw new Error("Webhook is required");
     //get all projects
-    const projectsResponse = await circleciService.getProjectByName(argv.project);
+    const projectsResponse = await circleciService.getProjects();
 
-    // console.log("project response", projectsResponse);
+    console.log("project response", projectsResponse);
 
     if(projectsResponse.error) throw new Error(projectsResponse.error);
 
     for(let project of projectsResponse.data){
         console.log("project.username !== env.circleciOrg", project.username, env.circleciOrg);
 
-        if(project.username !== env.circleciOrg) continue;
+        if(project.reponame !== argv.project) continue;
 
-        await processWebhook(project);
+        await processWebhook(project, argv);
     }
+
     process.exit(0);
 };
 
 
-async function processWebhook(project: any){
+async function processWebhook(project: any, argv: Record<string, any>){
 
     const vcsSlug: string = `${project.vcs_type}/${project.username}/${project.reponame}`;
 
