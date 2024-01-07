@@ -8,7 +8,6 @@ import env from "../../../common/env";
 const argv: any = yargs(hideBin(process.argv)).argv
 
 const execute = async () => {
-    if(!argv.webhook) throw new Error("Webhook is required");
     //get all projects
     const projectsResponse = await circleciService.getProjectByName(argv.project);
 
@@ -21,13 +20,13 @@ const execute = async () => {
 
         if(project.username !== env.circleciOrg) continue;
 
-        await processWebhook(project, argv);
+        await processDeleteWebhook(project);
     }
     process.exit(0);
 };
 
 
-async function processWebhook(project: any, argv: Record<string, any>){
+async function processDeleteWebhook(project: any){
 
     const vcsSlug: string = `${project.vcs_type}/${project.username}/${project.reponame}`;
 
@@ -43,25 +42,10 @@ async function processWebhook(project: any, argv: Record<string, any>){
 
     if(webhookResponse.error) throw new Error(webhookResponse.error);
 
-    const isWebhookPresent = webhookResponse.data.find((webhook: any) => webhook.url === argv.webhook);
+    for(const webhook of webhookResponse.data){
+        const deleteWebhookResponse = await circleciService.deleteWebhook(webhook.id);
 
-    if(isWebhookPresent) {
-        console.log("Webhook already present");
-        return;
+        console.log("deleteWebhookResponse", webhook, deleteWebhookResponse);
     }
-
-    const createWebhookResponse = await circleciService.createWebhook({
-        name: "6thbridge Webhook",
-        url: argv.webhook,
-        events: ["workflow-completed", "job-completed"],
-        "verify-tls": false,
-        "signing-secret": "",
-        "scope": {
-            "type": "project",
-            "id": projectResponse.data.id,
-        }
-    });
-
-    console.log("createWebhookResponse", createWebhookResponse);
 }
 execute();

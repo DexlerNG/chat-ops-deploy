@@ -21,10 +21,7 @@ const execute = async () => {
     if(projectsResponse.error) throw new Error(projectsResponse.error);
 
     for(let project of projectsResponse.data){
-        console.log("project.username !== env.circleciOrg", project.username, env.circleciOrg);
-
         if(project.reponame !== argv.project) continue;
-
         await processWebhook(project, argv);
     }
 
@@ -38,7 +35,7 @@ async function processWebhook(project: any, argv: Record<string, any>){
 
     const projectResponse = await circleciService.getProjectByName(vcsSlug);
 
-    console.log("projectResponse", projectResponse);
+    console.log("projectResponse", projectResponse.data?.length);
 
     if(projectResponse.error) throw new Error(projectResponse.error);
 
@@ -48,8 +45,12 @@ async function processWebhook(project: any, argv: Record<string, any>){
 
     if(webhookResponse.error) throw new Error(webhookResponse.error);
 
-    const isWebhookPresent = webhookResponse.data.find((webhook: any) => webhook.url === webhook);
+    const isWebhookPresent = webhookResponse.data.find((webhook: any) => {
+        console.log("webhook.url === webhook", webhook.url === webhook, webhook.url, argv.webhook);
 
+        return webhook.url === argv.webhook;
+    });
+    console.log("isWebhookPresent", isWebhookPresent);
     if(isWebhookPresent) {
         console.log("Webhook already present");
         return;
@@ -57,7 +58,7 @@ async function processWebhook(project: any, argv: Record<string, any>){
 
     const createWebhookResponse = await circleciService.createWebhook({
         name: "6thbridge Webhook",
-        url: webhook,
+        url: argv.webhook,
         events: ["workflow-completed", "job-completed"],
         "verify-tls": false,
         "signing-secret": "",

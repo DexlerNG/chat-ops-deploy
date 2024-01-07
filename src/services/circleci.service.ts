@@ -140,3 +140,27 @@ export const createWebhook = async (payload: any): Promise<FunctionResponseDTO<a
         }
     }
 };
+
+/**
+ * https://circleci.com/docs/api/v2/index.html#operation/deleteWebhook
+ * @param webhookId
+ */
+export const deleteWebhook = async (webhookId: any): Promise<FunctionResponseDTO<any>> => {
+    try{
+        const response = await _axios.delete(`/api/v2/webhook/${webhookId}`);
+        return {
+            statusCode: 200,
+            data: response.data
+        }
+    }catch (e){
+        console.log('error creating webhook', e);
+
+        const axiosError  = resolveAxiosError(e)
+
+        return {
+            error: e.message,
+            statusCode: 500,
+            data: null
+        }
+    }
+};
