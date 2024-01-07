@@ -10,9 +10,10 @@ const argv: any = yargs(hideBin(process.argv)).argv
 
 const execute = async () => {
 
+    if(!argv.project) throw new Error("Project is required")
     if(!argv.webhook) throw new Error("Webhook is required");
     //get all projects
-    const projectsResponse = await circleciService.getProjects();
+    const projectsResponse = await circleciService.getProjectByName(argv.project);
 
     // console.log("project response", projectsResponse);
 
