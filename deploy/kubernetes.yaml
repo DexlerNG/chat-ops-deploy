@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-ops-deploy
+  labels:
+    app: chat-ops-deploy
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-algorithm: "least_connections"
+
+spec:
+  selector:
+    app: chat-ops-deploy
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+      name: http
+  type: ClusterIP
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-ops-deploy
+  labels:
+    app: chat-ops-deploy
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: chat-ops-deploy
+  template:
+    metadata:
+      labels:
+        app: chat-ops-deploy
+    spec:
+      imagePullSecrets:
+        - name: docker
+      containers:
+        - name: chat-ops-deploy
+          image: {{image}}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      tolerations:
+        - effect: NoSchedule
+          key: env
+          operator: Equal
+          value: infra

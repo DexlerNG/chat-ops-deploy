@@ -1,0 +1,40 @@
+version: 2.1
+orbs:
+  kubernetes: circleci/kubernetes@1.3.1
+
+
+parameters:
+  env:
+    type: string
+    default: ""
+
+workflows:
+  deploy_pipeline:
+    when: # All must be true to trigger
+      and:
+        - equal: [ "production", <<pipeline.parameters.env>> ]
+    jobs:
+      - build-and-push-and-deploy-docker-image:
+          context:
+            - docker
+            - kubernetes
+
+jobs:
+  build-and-push-and-deploy-docker-image:
+    docker:
+      - image: cimg/base:stable
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.14
+          docker_layer_caching: true
+      - run: |
+          docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
+          docker build -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM -f deploy/Dockerfile .
+          docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM
+      - kubernetes/install-kubectl
+      - run: |
+          echo $KUBE_CONFIG | base64 -d > kubeconfig.yml
+          sed -i "s|{{image}}|$DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM|g" deploy/kubernetes.yaml
+          kubectl --kubeconfig kubeconfig.yml apply -n infra -f deploy/kubernetes.yaml
