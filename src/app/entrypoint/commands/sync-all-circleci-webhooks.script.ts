@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+//ts-node src/app/entrypoint/commands/sync-all-circleci-webhooks.script.ts --webhook=https://deploy.6thbridge.com/v1/process-webhook/circleci
 
 import yargs from "yargs"
 import {hideBin} from "yargs/helpers"
@@ -10,7 +11,7 @@ const argv: any = yargs(hideBin(process.argv)).argv
 const execute = async () => {
     if(!argv.webhook) throw new Error("Webhook is required");
     //get all projects
-    const projectsResponse = await circleciService.getProjectByName(argv.project);
+    const projectsResponse = await circleciService.getProjects();
 
     // console.log("project response", projectsResponse);
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+///ts-node src/app/entrypoint/commands/sync-circle-ci-webhook.script.ts --project=user-service --webhook=https://deploy.6thbridge.com/v1/process-webhook/circleci
 import yargs from "yargs"
 import {hideBin} from "yargs/helpers"
 import * as circleciService from "../../../services/circleci.service";

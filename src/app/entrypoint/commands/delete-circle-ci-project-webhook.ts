@@ -1,26 +1,32 @@
 #!/usr/bin/env node
 
-
-
+import yargs from "yargs"
+import {hideBin} from "yargs/helpers"
 import * as circleciService from "../../../services/circleci.service";
 import env from "../../../common/env";
 
+//ts-node src/app/entrypoint/commands/delete-circle-ci-project-webhook.ts --project=user-service
+const argv: any = yargs(hideBin(process.argv)).argv
 
-//ts-node src/app/entrypoint/commands/delete-all-circle-ci-project-webhooks.ts
 const execute = async () => {
+
+    if(!argv.project) throw new Error("Project name is required");
     //get all projects
     const projectsResponse = await circleciService.getProjects();
 
-    console.log("project response", projectsResponse);
+    // console.log("project response", projectsResponse);
 
     if(projectsResponse.error) throw new Error(projectsResponse.error);
 
     for(let project of projectsResponse.data){
         console.log("project.username !== env.circleciOrg", project.username, env.circleciOrg);
-
         if(project.username !== env.circleciOrg) continue;
 
+        if(project.reponame !== argv.project) continue;
+
         await processDeleteWebhook(project);
+
+        break;
     }
     process.exit(0);
 };
