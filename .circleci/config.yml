@@ -27,17 +27,18 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-          version: 20.10.14
+          version: default
           docker_layer_caching: true
       - run: |
           docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
-          docker build -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM -f deploy/Dockerfile .
-          docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM
-      - kubernetes/install-kubectl
-      - kubernetes/install-kubeconfig:
-          kubeconfig: KUBE_CONFIG
-      - run: |
-          sed -i "s|{{image}}|$DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM|g" deploy/kubernetes.yaml
-          cat deploy/kubernetes.yaml
-          cat ~/.kube/config
-          kubectl apply -n infra -f deploy/kubernetes.yaml
+          docker build -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1 -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest -f deploy/Dockerfile .
+          docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1
+          docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+#      - kubernetes/install-kubectl
+#      - kubernetes/install-kubeconfig:
+#          kubeconfig: KUBE_CONFIG
+#      - run: |
+#          sed -i "s|{{image}}|$DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM|g" deploy/kubernetes.yaml
+#          cat deploy/kubernetes.yaml
+#          cat ~/.kube/config
+#          kubectl apply -n infra -f deploy/kubernetes.yaml

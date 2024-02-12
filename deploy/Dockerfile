@@ -5,6 +5,7 @@
 
 FROM node:lts-alpine AS packages
 
+RUN apk update && apk upgrade && apk add aws-cli jq bash curl
 
 RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
 
