@@ -164,3 +164,66 @@ export const deleteWebhook = async (webhookId: any): Promise<FunctionResponseDTO
         }
     }
 };
+
+export const getSSHDigests = async (projectId: string): Promise<FunctionResponseDTO<any>> => {
+    try{
+        const response = await _axios.get(`/api/v1.1/project/${projectId}/settings?ssh-key-digest=sha256`);
+        return {
+            statusCode: 200,
+            data: response.data
+        }
+    }catch (e){
+        console.log('error getting ssh', e);
+
+        const axiosError  = resolveAxiosError(e)
+
+        return {
+            error: e.message,
+            statusCode: 500,
+            data: null
+        }
+    }
+};
+export const createSSHKey = async (projectId: string, payload: any): Promise<FunctionResponseDTO<any>> => {
+    try{
+        const response = await _axios.post(`/api/v1.1/project/${projectId}/ssh-key`, payload);
+        return {
+            statusCode: 200,
+            data: response.data
+        }
+    }catch (e){
+        console.log('error creating SSHKey', e);
+
+        const axiosError  = resolveAxiosError(e)
+
+        return {
+            error: e.message,
+            statusCode: 500,
+            data: null
+        }
+    }
+};
+
+export const deleteSSHKey = async (projectId: string, payload: any): Promise<FunctionResponseDTO<any>> => {
+    try{
+        console.log("p", payload);
+        const response = await _axios.delete(`/api/v1.1/project/${projectId}/ssh-key`, {
+            data: payload
+        });
+        return {
+            statusCode: 200,
+            data: response.data
+        }
+    }catch (e){
+        console.log('error creating SSHKey', e);
+
+        const axiosError  = resolveAxiosError(e)
+
+        return {
+            error: e.message,
+            statusCode: 500,
+            data: null
+        }
+    }
+};
+
