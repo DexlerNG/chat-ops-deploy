@@ -60,7 +60,7 @@ export default class CircleCI implements CICDProviderInterface{
             messages.push(`Build Time: *${dayjs(request.body.job.stopped_at).unix() - dayjs(request.body.job.started_at).unix()} seconds*`);
 
             messages.push(`Commit: *${request.body.pipeline.vcs.revision}*`)
-            messages.push(`Workflow URL: *${request.body.workflow.url}*`);
+            messages.push(`Workflow URL: ${request.body.workflow.url}`);
             messages.push(`Triggered By: *${deployEntity.user.name}*`);
             messages.push(`Status: *${request.body.job.status}*`);
         }
@@ -82,7 +82,7 @@ export default class CircleCI implements CICDProviderInterface{
             messages.push(`Build Time: *${dayjs(request.body.workflow.stopped_at).unix() - dayjs(request.body.workflow.created_at).unix()} seconds*`);
             messages.push(`Build Number: *${request.body.pipeline.number}*`);
             messages.push(`Commit: *${request.body.pipeline.vcs.revision}*`)
-            messages.push(`Workflow URL: *${request.body.workflow.url}*`);
+            messages.push(`Workflow URL: ${request.body.workflow.url}`);
             messages.push(`Triggered By: *${deployEntity.user.name}*`);
             messages.push(`Status: *${request.body.workflow.status}*`);
         }
