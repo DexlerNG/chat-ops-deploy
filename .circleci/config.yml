@@ -1,7 +1,4 @@
 version: 2.1
-orbs:
-  kubernetes: circleci/kubernetes@1.3.1
-
 
 parameters:
   env:
@@ -10,35 +7,99 @@ parameters:
 
 workflows:
   deploy_pipeline:
-    when: # All must be true to trigger
-      and:
+    when:
+      or:
         - equal: [ "production", <<pipeline.parameters.env>> ]
+        - equal: [ "sandbox", <<pipeline.parameters.env>> ]
     jobs:
-      - build-and-push-and-deploy-docker-image:
+      - build_and_push_docker_image:
+          name: <<pipeline.parameters.env>>_build_and_push_docker_image
+          context:
+            - docker
+      - deploy-over-ssh:
+          requires:
+            - <<pipeline.parameters.env>>_build_and_push_docker_image
+          context:
+            - ssh-<<pipeline.parameters.env>>
+  arm_deploy_pipeline:
+    when:
+      or:
+        - equal: [ "qa", <<pipeline.parameters.env>> ]
+        - equal: [ "staging", <<pipeline.parameters.env>> ]
+    jobs:
+      - arm_build_and_push_docker_image:
+          name: <<pipeline.parameters.env>>_arm_build_and_push_docker_image
           context:
             - docker
             - kubernetes
+      - deploy-over-ssh:
+          requires:
+            - <<pipeline.parameters.env>>_arm_build_and_push_docker_image
+          context:
+            - ssh-<<pipeline.parameters.env>>
 
+commands:
+
+  configure-dockerhub:
+    description: Configure Docker Hub access
+    steps:
+      - run:
+          name: Configure Docker Hub
+          command: |
+            docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
+
+  build-and-deploy-docker:
+    description: Build and Deploy Docker
+    steps:
+      - run:
+          environment:
+            ENVIRONMENT: <<pipeline.parameters.env>>
+          command: |
+            docker build --progress plain --build-arg env=<<pipeline.parameters.env>> -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1 -f deploy/Dockerfile .
+            docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1
+            docker tag $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1 $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-latest
+            docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-latest
+            if [ $ENVIRONMENT = 'production' ]; then
+              echo 'production latest tag';
+              docker tag $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1 $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+              docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+            fi
 jobs:
-  build-and-push-and-deploy-docker-image:
+  arm_build_and_push_docker_image:
     docker:
-      - image: cimg/base:stable
-    resource_class: medium
+      - image: cimg/node:20.5.0
+    resource_class: arm.large
     steps:
       - checkout
       - setup_remote_docker:
           version: default
           docker_layer_caching: true
-      - run: |
-          docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
-          docker build -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1 -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest -f deploy/Dockerfile .
-          docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1
-          docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
-#      - kubernetes/install-kubectl
-#      - kubernetes/install-kubeconfig:
-#          kubeconfig: KUBE_CONFIG
-#      - run: |
-#          sed -i "s|{{image}}|$DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:$CIRCLE_SHA1-$CIRCLE_BUILD_NUM|g" deploy/kubernetes.yaml
-#          cat deploy/kubernetes.yaml
-#          cat ~/.kube/config
-#          kubectl apply -n infra -f deploy/kubernetes.yaml
+      - configure-dockerhub
+      - build-and-deploy-docker
+  build_and_push_docker_image:
+    docker:
+      - image: cimg/node:20.5.0
+    resource_class: arm.large
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: default
+          docker_layer_caching: true
+      - configure-dockerhub
+      - build-and-deploy-docker
+
+  deploy-over-ssh:
+    machine:
+      image: ubuntu-2004:202010-01
+    steps:
+      - run:
+          name: Deploy Over SSH
+          command: |
+            ssh -v $SSH_USERNAME@$SSH_HOST "~/infra-iaac/<<pipeline.parameters.env>>/deploy.sh $CIRCLE_PROJECT_REPONAME <<pipeline.parameters.env>>-$CIRCLE_SHA1"
+
+aliases:
+  - &docker_steps
+    - checkout
+    - setup_remote_docker:
+        version: default
+        docker_layer_caching: true
