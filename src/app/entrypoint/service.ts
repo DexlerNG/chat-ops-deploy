@@ -6,7 +6,8 @@ import env from "../../common/env";
 import logger from "../../common/logger";
 import deployRepository from "./repository";
 import {DeployEntity, DeployStatus} from "./entity";
-
+import * as messageAction from "./actions/message.action";
+import {SendMessageParams} from "./dto";
 export const processCommand = async (request: RequestEntity) => {
     logger.info("Request Data", request.body);
 
@@ -41,12 +42,30 @@ export const processCommand = async (request: RequestEntity) => {
     }
 
     //process command should return the following to be passed to the circle-ci provider: env, branch, service
-    const chatProcessCommandResponse = await chatInterface.processCommand(request);
+    const chatProcessCommandResponse = await chatInterface.getMessageContent(request);
 
     if (chatProcessCommandResponse.error) {
         return {
             error: chatProcessCommandResponse.error,
             statusCode: chatProcessCommandResponse.statusCode || 400
+        }
+    }
+
+
+    const processMessageResult = await messageAction.processMessage(chatProcessCommandResponse.data);
+
+    const channelParams: SendMessageParams = {
+        threadId:chatProcessCommandResponse.data.threadId,
+        messageId: chatProcessCommandResponse.data.messageId,
+        channel: chatProcessCommandResponse.data.channel,
+    };
+
+    if(processMessageResult.error){
+        await chatInterface.sendMessage(channelParams, processMessageResult.error);
+
+        return {
+            data: "Ok",
+            statusCode: 200
         }
     }
 
@@ -61,7 +80,7 @@ export const processCommand = async (request: RequestEntity) => {
 
     const checkIfMessageHasBeenProcessed = await deployRepository.countDocuments({
         chatProvider: request.params.chatProvider,
-        messageId: chatProcessCommandResponse.data.messageParams.messageId,
+        messageId: chatProcessCommandResponse.data.messageId,
     });
     console.log("checkIfMessageHasBeenProcessed", checkIfMessageHasBeenProcessed);
 
@@ -74,16 +93,16 @@ export const processCommand = async (request: RequestEntity) => {
         chatProvider: request.params.chatProvider,
         repoProvider: request.params.repoProvider,
         CICDProvider: request.params.CICDProvider,
-        branch: chatProcessCommandResponse.data.deployParams.branch,
-        channel: chatProcessCommandResponse.data.messageParams.channel,
-        env: chatProcessCommandResponse.data.deployParams.env,
-        service: chatProcessCommandResponse.data.deployParams.service,
+        branch: processMessageResult.data.branch,
+        channel: chatProcessCommandResponse.data.channel,
+        env: processMessageResult.data.env,
+        service: processMessageResult.data.service,
         pipelineId: "",
         pipelineNumber: "",
         status: DeployStatus.processing,
-        command: chatProcessCommandResponse.data.command,
-        threadId: chatProcessCommandResponse.data.messageParams.threadId,
-        messageId: chatProcessCommandResponse.data.messageParams.messageId,
+        command: chatProcessCommandResponse.data.content,
+        threadId: chatProcessCommandResponse.data.threadId,
+        messageId: chatProcessCommandResponse.data.messageId,
         user: chatProcessCommandResponse.data.user,
     }
 
@@ -93,7 +112,7 @@ export const processCommand = async (request: RequestEntity) => {
     const CICDResponse = await CICDInterface.processDeploymentCommand(deployEntity);
 
     if (CICDResponse.error) {
-        chatInterface.sendMessage(chatProcessCommandResponse.data.messageParams, CICDResponse.error)
+        chatInterface.sendMessage(channelParams, CICDResponse.error)
             .catch(console.log);
 
 
@@ -108,7 +127,7 @@ export const processCommand = async (request: RequestEntity) => {
         pipelineNumber: CICDResponse.data.pipelineNumber
     });
 
-    chatInterface.sendMessage(chatProcessCommandResponse.data.messageParams, CICDResponse.data.message)
+    chatInterface.sendMessage(channelParams, CICDResponse.data.message)
         .catch(console.log);
 
     return {

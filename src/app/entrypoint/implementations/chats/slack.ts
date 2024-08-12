@@ -4,7 +4,12 @@ import TriggerCircleCIBuildPipeline from "../../pipelines/trigger-circleci-build
 import logger from "../../../../common/logger";
 import ProcessJobCompletedPipeline from "../../pipelines/process-job-completed.pipeline";
 import ProcessWorkflowCompletedPipeline from "../../pipelines/process-workflow-completed.pipeline";
-import {ChatProviderProcessCommandResponse, ExecuteDeployCommandDTO, SendMessageParams} from "../../dto";
+import {
+    ChatProviderMessageContent,
+    ChatProviderProcessCommandResponse,
+    ExecuteDeployCommandDTO,
+    SendMessageParams
+} from "../../dto";
 import * as slackService from "../../../../services/slack.service";
 
 export default class Slack implements ChatProviderInterface {
@@ -23,6 +28,45 @@ export default class Slack implements ChatProviderInterface {
         };
     }
 
+    async getMessageContent(request: RequestEntity): Promise<FunctionResponseDTO<ChatProviderMessageContent>> {
+        const message: string = request.body.event.text;
+
+        if (!message) {
+            logger.error("Message is empty", request.body);
+
+            return {
+                error: "Empty Event Payload",
+                statusCode: 400
+            }
+        }
+
+        //get user
+        const slackUserResponse = await slackService.getUserInfo(request.body.event.user);
+        logger.info("slackUser", slackUserResponse);
+
+
+        if(slackUserResponse.error) {
+            logger.info("slackUser", slackUserResponse);
+        }
+
+        let user: any = {
+            name: slackUserResponse.data?.real_name || "anonymous",
+            id: slackUserResponse.data?.id || "anonymous"
+        };
+
+        return {
+            data: {
+                content: message,
+                user,
+                channel: request.body.event.channel,
+                threadId: request.body.event.event_ts,
+                messageId: request.body.event.event_ts,
+                meta: request.body
+            }
+        }
+
+
+    }
     async processCommand(request: RequestEntity): Promise<FunctionResponseDTO<ChatProviderProcessCommandResponse>> {
         const message: string = request.body.event.text;
 

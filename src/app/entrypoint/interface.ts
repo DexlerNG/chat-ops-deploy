@@ -1,5 +1,6 @@
 import {FunctionResponseDTO, RequestEntity} from "../../common/entities";
 import {
+    ChatProviderMessageContent,
     ChatProviderProcessCommandResponse,
     CICDProviderProcessCommandResponse, CICDProviderResolveWebhookResponse,
     SendMessageParams
@@ -9,6 +10,7 @@ import {DeployEntity} from "./entity";
 
 export interface ChatProviderInterface{
     processVerification(request: RequestEntity): Promise<FunctionResponseDTO<string>>
+    getMessageContent(request: RequestEntity): Promise<FunctionResponseDTO<ChatProviderMessageContent>>
     processCommand(request: RequestEntity): Promise<FunctionResponseDTO<ChatProviderProcessCommandResponse>>
     processWebhook(request: RequestEntity): Promise<FunctionResponseDTO<string>>
     sendMessage(sendMessageParams: SendMessageParams, text: string): Promise<FunctionResponseDTO<string>>

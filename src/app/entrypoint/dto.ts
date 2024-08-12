@@ -12,6 +12,17 @@ export class SendMessageParams {
 }
 
 
+export class ChatProviderMessageContent {
+    messageId: string
+    content: string
+    user?: {
+        name: string
+        id: string
+    }
+    channel?: string
+    threadId?: string
+    meta?: Record<string, any>
+}
 export class ChatProviderProcessCommandResponse {
     command: string
     user: {
