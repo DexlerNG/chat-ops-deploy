@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  node: circleci/node@5.1.0
 
 parameters:
   env:
@@ -9,19 +11,20 @@ workflows:
   deploy_pipeline:
     when:
       or:
-        - equal: [ "production", <<pipeline.parameters.env>> ]
-        - equal: [ "sandbox", <<pipeline.parameters.env>> ]
         - equal: [ "staging", <<pipeline.parameters.env>> ]
     jobs:
+      - test
       - build_and_push_docker_image:
-          name: <<pipeline.parameters.env>>_build_and_push_docker_image
+          name: build_and_push_docker_image
+          requires:
+            - test
           context:
             - docker
       - deploy-over-ssh:
           requires:
-            - <<pipeline.parameters.env>>_build_and_push_docker_image
+            - build_and_push_docker_image
           context:
-            - ssh-<<pipeline.parameters.env>>
+            - ssh-staging
 
 commands:
   configure-dockerhub:
@@ -52,7 +55,7 @@ jobs:
   build_and_push_docker_image:
     docker:
       - image: cimg/node:20.5.0
-    resource_class: arm.large
+    resource_class: medium
     steps:
       - checkout
       - setup_remote_docker:
@@ -63,12 +66,12 @@ jobs:
 
   deploy-over-ssh:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2204:current
     steps:
       - run:
           name: Deploy Over SSH
           command: |
-            ssh -v $SSH_USERNAME@$SSH_HOST "~/infra-iaac/<<pipeline.parameters.env>>/deploy.sh $CIRCLE_PROJECT_REPONAME <<pipeline.parameters.env>>-$CIRCLE_SHA1"
+            ssh -v $SSH_USERNAME@$SSH_HOST "~/infra-iaac/infra-tools/deploy.sh $CIRCLE_PROJECT_REPONAME <<pipeline.parameters.env>>-$CIRCLE_SHA1"
 
 aliases:
   - &docker_steps
