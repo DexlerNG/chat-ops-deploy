@@ -44,6 +44,7 @@ export const processCommand = async (request: RequestEntity) => {
     //process command should return the following to be passed to the circle-ci provider: env, branch, service
     const chatProcessCommandResponse = await chatInterface.getMessageContent(request);
 
+    console.log("chatProcessCommandResponse", JSON.stringify(chatProcessCommandResponse));
     if (chatProcessCommandResponse.error) {
         return {
             error: chatProcessCommandResponse.error,
@@ -59,6 +60,8 @@ export const processCommand = async (request: RequestEntity) => {
         messageId: chatProcessCommandResponse.data.messageId,
         channel: chatProcessCommandResponse.data.channel,
     };
+
+    console.log("processMessageResult", JSON.stringify(processMessageResult));
 
     if(processMessageResult.error){
         await chatInterface.sendMessage(channelParams, processMessageResult.error);
