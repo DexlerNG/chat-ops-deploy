@@ -9,6 +9,15 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
     let deployParams: ExecuteDeployCommandDTO;
 
     const params: string[] = chatProviderMessageContent.content.split(" ");
+    if (chatProviderMessageContent.content.toLowerCase().trim().startsWith("error")){
+        return {
+            data: {
+                service: undefined,
+                env: undefined,
+                branch: undefined
+            }
+        }
+    }
     if(chatProviderMessageContent.content.toLowerCase().trim().startsWith("deploy")){
         deployParams = {
             service: params?.[1],
@@ -29,7 +38,7 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
     if(!deployParams){
         return {
             // error: "Command Not Starting with 'deploy'",
-            error: "Invalid Command",
+            error: "Error: Invalid Command. Command should start with deploy/smoke",
             statusCode: 200 //we are returning 200 because we don't want to send an error message back to slack as they will keep on retrying
         }
     }
