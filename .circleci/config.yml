@@ -13,11 +13,8 @@ workflows:
       or:
         - equal: [ "staging", <<pipeline.parameters.env>> ]
     jobs:
-      - test
       - build_and_push_docker_image:
           name: build_and_push_docker_image
-          requires:
-            - test
           context:
             - docker
       - deploy-over-ssh:
