@@ -11,6 +11,7 @@ workflows:
       or:
         - equal: [ "production", <<pipeline.parameters.env>> ]
         - equal: [ "sandbox", <<pipeline.parameters.env>> ]
+        - equal: [ "staging", <<pipeline.parameters.env>> ]
     jobs:
       - build_and_push_docker_image:
           name: <<pipeline.parameters.env>>_build_and_push_docker_image
@@ -21,25 +22,8 @@ workflows:
             - <<pipeline.parameters.env>>_build_and_push_docker_image
           context:
             - ssh-<<pipeline.parameters.env>>
-  arm_deploy_pipeline:
-    when:
-      or:
-        - equal: [ "qa", <<pipeline.parameters.env>> ]
-        - equal: [ "staging", <<pipeline.parameters.env>> ]
-    jobs:
-      - arm_build_and_push_docker_image:
-          name: <<pipeline.parameters.env>>_arm_build_and_push_docker_image
-          context:
-            - docker
-            - kubernetes
-      - deploy-over-ssh:
-          requires:
-            - <<pipeline.parameters.env>>_arm_build_and_push_docker_image
-          context:
-            - ssh-<<pipeline.parameters.env>>
 
 commands:
-
   configure-dockerhub:
     description: Configure Docker Hub access
     steps:
@@ -65,17 +49,6 @@ commands:
               docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
             fi
 jobs:
-  arm_build_and_push_docker_image:
-    docker:
-      - image: cimg/node:20.5.0
-    resource_class: arm.large
-    steps:
-      - checkout
-      - setup_remote_docker:
-          version: default
-          docker_layer_caching: true
-      - configure-dockerhub
-      - build-and-deploy-docker
   build_and_push_docker_image:
     docker:
       - image: cimg/node:20.5.0
