@@ -17,11 +17,11 @@ workflows:
           name: build_and_push_docker_image
           context:
             - docker
-      - deploy-over-ssh:
-          requires:
-            - build_and_push_docker_image
-          context:
-            - ssh-staging
+#      - deploy-over-ssh:
+#          requires:
+#            - build_and_push_docker_image
+#          context:
+#            - ssh-staging
 
 commands:
   configure-dockerhub:
