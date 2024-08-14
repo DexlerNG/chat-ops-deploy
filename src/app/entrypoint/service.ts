@@ -64,7 +64,7 @@ export const processCommand = async (request: RequestEntity) => {
     console.log("processMessageResult", JSON.stringify(processMessageResult));
 
     if(processMessageResult.error){
-        await chatInterface.sendMessage(channelParams, processMessageResult.error);
+        // await chatInterface.sendMessage(channelParams, processMessageResult.error);
 
         return {
             data: "Ok",
