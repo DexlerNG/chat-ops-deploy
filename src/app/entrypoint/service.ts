@@ -48,7 +48,7 @@ export const processCommand = async (request: RequestEntity) => {
     if (chatProcessCommandResponse.error) {
         return {
             error: chatProcessCommandResponse.error,
-            statusCode: chatProcessCommandResponse.statusCode || 400
+            statusCode: 200
         }
     }
 
