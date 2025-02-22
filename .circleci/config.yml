@@ -1,6 +1,7 @@
 version: 2.1
 orbs:
   node: circleci/node@5.1.0
+  kubernetes: circleci/kubernetes@2.0.0
 
 parameters:
   env:
@@ -11,17 +12,24 @@ workflows:
   deploy_pipeline:
     when:
       or:
+#        - equal: [ "production", <<pipeline.parameters.env>> ]
+#        - equal: [ "sandbox", <<pipeline.parameters.env>> ]
         - equal: [ "staging", <<pipeline.parameters.env>> ]
     jobs:
+      #      - test
       - build_and_push_docker_image:
-          name: build_and_push_docker_image
+          name: <<pipeline.parameters.env>>_build_and_push_docker_image
+          #          requires:
+          #            - test
           context:
             - docker
+            - github
+            - kubernetes-<<pipeline.parameters.env>>
 #      - deploy-over-ssh:
 #          requires:
-#            - build_and_push_docker_image
+#            - <<pipeline.parameters.env>>_build_and_push_docker_image
 #          context:
-#            - ssh-staging
+#            - ssh-<<pipeline.parameters.env>>
 
 commands:
   configure-dockerhub:
@@ -32,6 +40,19 @@ commands:
           command: |
             docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
 
+  run-iaac-command:
+    description: Cloning IAAC and Building
+    steps:
+      - kubernetes/install_kubectl
+      - run:
+          environment:
+            ENVIRONMENT: <<pipeline.parameters.env>>
+            DOCKERFILE: "deploy/Dockerfile"
+          command: |
+            git clone --branch ssh-deploy https://$PERSONAL_ACCESS_TOKEN@github.com/DexlerNG/infra-iaac.git
+            cp infra-iaac/deploy/Makefile ./Makefile
+            make build-backend
+            make deploy-backend
   build-and-deploy-docker:
     description: Build and Deploy Docker
     steps:
@@ -49,6 +70,22 @@ commands:
               docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
             fi
 jobs:
+  test:
+    docker:
+      - image: cimg/node:21.1.0
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: yarn
+      - run:
+          name: Lint
+          command: yarn lint:ci
+      - run:
+          name: Test
+          command: yarn test
+      - run:
+          name: Build
+          command: yarn build
   build_and_push_docker_image:
     docker:
       - image: cimg/node:20.5.0
@@ -58,17 +95,7 @@ jobs:
       - setup_remote_docker:
           version: default
           docker_layer_caching: true
-      - configure-dockerhub
-      - build-and-deploy-docker
-
-  deploy-over-ssh:
-    machine:
-      image: ubuntu-2204:current
-    steps:
-      - run:
-          name: Deploy Over SSH
-          command: |
-            ssh -v $SSH_USERNAME@$SSH_HOST "~/infra-iaac/infra-tools/deploy.sh $CIRCLE_PROJECT_REPONAME <<pipeline.parameters.env>>-$CIRCLE_SHA1"
+      - run-iaac-command
 
 aliases:
   - &docker_steps
