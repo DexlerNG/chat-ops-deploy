@@ -29,7 +29,7 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
     if(chatProviderMessageContent.content.toLowerCase().trim().startsWith("smoke")){
         deployParams = {
             service: "payfonte-e2e",
-            env: params?.[1],
+            env: params?.[2],
             branch: params?.[2] ?? "master"
         };
     }
