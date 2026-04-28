@@ -49,7 +49,7 @@ commands:
             ENVIRONMENT: <<pipeline.parameters.env>>
             DOCKERFILE: "deploy/Dockerfile"
           command: |
-            git clone --branch ssh-deploy https://$PERSONAL_ACCESS_TOKEN@github.com/DexlerNG/infra-iaac.git
+            git clone --branch=master --dept=1 https://$PERSONAL_ACCESS_TOKEN@github.com/DexlerNG/infra-iaac.git
             cp infra-iaac/deploy/Makefile ./Makefile
             make build-backend
             make deploy-backend
@@ -72,7 +72,7 @@ commands:
 jobs:
   test:
     docker:
-      - image: cimg/node:21.1.0
+      - image: cimg/node:lts
     steps:
       - checkout
       - node/install-packages:
@@ -88,7 +88,7 @@ jobs:
           command: yarn build
   build_and_push_docker_image:
     docker:
-      - image: cimg/node:20.5.0
+      - image: cimg/node:lts
     resource_class: medium
     steps:
       - checkout
