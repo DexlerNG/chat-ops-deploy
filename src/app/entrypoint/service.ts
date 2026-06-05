@@ -79,7 +79,12 @@ export const processCommand = async (request: RequestEntity) => {
         }
     }
 
-    if(processMessageResult.data.service === "client-admin" && processMessageResult.data.env === "staging"){
+    const githubActionsRepos = [
+        "client-admin",
+        // "central-auth-web",
+        // "payfusion-client-dashboard"
+    ];
+    if(githubActionsRepos.includes(processMessageResult.data.service)){
         request.params.CICDProvider = "github-actions";
     }
 
