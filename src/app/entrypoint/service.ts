@@ -200,9 +200,14 @@ export const processWebhook = async (request: RequestEntity) => {
     }
 
     if (!deployEntity) {
-        return {
+        console.log("error", {
             error: `Oops, Deployment with pipelineId "${getPipelineIdFromWebhookResponse.data}" not found`,
             statusCode: 404
+        });
+
+        return {
+            data: "processed",
+            statusCode: 200
         }
     }
 
@@ -216,8 +221,12 @@ export const processWebhook = async (request: RequestEntity) => {
 
     const webhookResponse = await CICDInterface.resolveWebhook(request, deployEntity);
     if (webhookResponse.error) {
-        return {
+        console.log("error", {
             error: webhookResponse.error
+        });
+        return {
+            data: "processed",
+            statusCode: 200
         }
     }
 
