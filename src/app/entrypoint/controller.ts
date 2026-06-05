@@ -24,7 +24,6 @@ export const processCommand = async (req: express.Request, res: express.Response
 
 export const processWebhook = async (req: express.Request, res: express.Response) => {
     const {
-        error,
         statusCode,
         data
     } = await service.processWebhook({
