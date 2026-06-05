@@ -1,5 +1,6 @@
 import Slack from "./chats/slack";
 import CircleCI from "./cicd/circle-ci";
+import GithubActions from "./cicd/github-actions";
 import {ChatProviderInterface, CICDProviderInterface} from "../interface";
 
 
@@ -8,7 +9,9 @@ const chatProviderImplementationMap = {
 }
 
 const CICDProviderImplementationMap = {
-    "circleci": new CircleCI()
+    "circleci": new CircleCI(),
+    "github-actions": new GithubActions(),
+    "github": new GithubActions()
 }
 
 

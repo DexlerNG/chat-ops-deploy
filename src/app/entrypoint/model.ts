@@ -44,7 +44,7 @@ const schema: Schema = new Schema({
     }
 }, {
     toJSON: {
-        transform: (doc, ret) => {
+        transform: (doc, ret: Record<string, unknown>) => {
             ret.id = ret._id;
             // delete ret.createdAt;
             // delete ret.updatedAt;

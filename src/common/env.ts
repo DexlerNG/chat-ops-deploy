@@ -27,6 +27,12 @@ const env = {
   circleciToken: process.env.CIRCLE_CI_TOKEN,
   circleciOrg: process.env.CIRCLE_CI_ORG,
 
+  //GitHub Actions
+  githubBaseURL: process.env.GITHUB_BASE_URL || "https://api.github.com",
+  githubToken: process.env.GITHUB_TOKEN,
+  githubOwner: process.env.GITHUB_OWNER,
+  githubWorkflowId: process.env.GITHUB_WORKFLOW_ID || "main.yml",
+
 
   defaultChatProvider: process.env.DEFAULT_CHAT_PROVIDER,
   defaultRepoProvider: process.env.DEFAULT_REPO_PROVIDER,

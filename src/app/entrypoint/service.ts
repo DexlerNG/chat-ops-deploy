@@ -79,6 +79,10 @@ export const processCommand = async (request: RequestEntity) => {
         }
     }
 
+    if(processMessageResult.data.service === "client-admin" && processMessageResult.data.env === "staging"){
+        request.params.CICDProvider = "github-actions";
+    }
+
     const CICDInterface = DeployFactory.getCICDProviderImplementation(request.params.CICDProvider);
 
     if (!CICDInterface) {
@@ -149,7 +153,7 @@ export const processCommand = async (request: RequestEntity) => {
 
 export const processWebhook = async (request: RequestEntity) => {
 
-    console.log("Broker Payload", JSON.stringify(request.body), request.params);
+    console.log("Webhoook", JSON.stringify(request.body), request.params);
 
     const CICDProvider = request.params.CICDProvider || env.defaultCICDProvider;
 
@@ -173,6 +177,27 @@ export const processWebhook = async (request: RequestEntity) => {
     let deployEntity: DeployEntity = await deployRepository.findOne({
         pipelineId: getPipelineIdFromWebhookResponse.data
     });
+
+    if (!deployEntity && ["github-actions", "github"].includes(CICDProvider)) {
+        const repositoryName = request.body?.repository?.name;
+        const branch = request.body?.workflow_run?.head_branch || request.body?.workflow_job?.head_branch;
+
+        if (repositoryName && branch) {
+            deployEntity = await deployRepository.findOne({
+                CICDProvider,
+                service: repositoryName,
+                branch,
+                status: DeployStatus.processing
+            });
+
+            if (deployEntity && getPipelineIdFromWebhookResponse.data) {
+                deployEntity = await deployRepository.findOneAndUpdate({_id: deployEntity._id}, {
+                    pipelineId: getPipelineIdFromWebhookResponse.data,
+                    pipelineNumber: String(request.body?.workflow_run?.run_number || request.body?.workflow_job?.run_id || deployEntity.pipelineNumber || "")
+                });
+            }
+        }
+    }
 
     if (!deployEntity) {
         return {
@@ -212,13 +237,20 @@ export const processWebhook = async (request: RequestEntity) => {
         }
     }
 
-    chatInterface.sendMessage({
+    console.log("Result", {
         messageId: deployEntity.messageId,
         channel: deployEntity.channel,
         threadId: deployEntity.threadId
     }, webhookResponse.data.message)
-        .catch(console.log);
 
+    if(webhookResponse.data.message){
+        chatInterface.sendMessage({
+            messageId: deployEntity.messageId,
+            channel: deployEntity.channel,
+            threadId: deployEntity.threadId
+        }, webhookResponse.data.message)
+            .catch(console.log);
+    }
 
     return {
         data: "processed"

@@ -12,10 +12,6 @@ export function register(){
     mongoose.set("debug", true);
 
     mongoose.connect(getMongoDBConfig(), {
-        useNewUrlParser: true,
-        useCreateIndex: true,
-        useFindAndModify: false,
-        useUnifiedTopology: true,
         readPreference: "secondaryPreferred",
         authSource: "admin"
     });
