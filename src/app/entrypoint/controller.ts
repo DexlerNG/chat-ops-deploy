@@ -34,7 +34,7 @@ export const processWebhook = async (req: express.Request, res: express.Response
     });
 
 
-    if (error) return response.error(res, error, statusCode);
+    // if (error) return response.error(res, error, statusCode);
 
-    return response.success(res, data, statusCode);
+    return response.success(res, "processed", statusCode);
 };
