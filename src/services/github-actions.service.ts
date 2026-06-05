@@ -15,6 +15,7 @@ const _axios = axios.create({
 
 export const triggerWorkflowDispatch = async (payload: TriggerWorkflowDispatchRequest): Promise<FunctionResponseDTO<any>> => {
     try {
+        console.log("payload", JSON.stringify({payload, owner: env.githubOwner, repo: payload.service, workflowId: payload.workflowId, ref: payload.branch, inputs: payload.inputs}));
         await _axios.post(`/repos/${env.githubOwner}/${payload.service}/actions/workflows/${payload.workflowId}/dispatches`, {
             ref: payload.branch,
             inputs: payload.inputs
