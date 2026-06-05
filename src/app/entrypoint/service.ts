@@ -160,16 +160,27 @@ export const processWebhook = async (request: RequestEntity) => {
     const CICDInterface = DeployFactory.getCICDProviderImplementation(CICDProvider);
 
     if (!CICDInterface) {
-        return {
+        console.log("error", {
             error: `Oops, CICD Provider "${CICDProvider}" is not supported`,
-            statusCode: 400
+            statusCode: 404
+        });
+
+        return {
+            data: "processed",
+            statusCode: 200
         }
     }
 
     const getPipelineIdFromWebhookResponse = await CICDInterface.getPipelineIdFromWebhook(request);
     if (getPipelineIdFromWebhookResponse.error) {
+        console.log("error", {
+            error: getPipelineIdFromWebhookResponse.error,
+            statusCode: 404
+        });
+
         return {
-            error: getPipelineIdFromWebhookResponse.error
+            data: "processed",
+            statusCode: 200
         }
     }
 
