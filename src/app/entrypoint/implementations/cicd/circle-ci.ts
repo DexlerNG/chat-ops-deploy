@@ -46,6 +46,7 @@ export default class CircleCI implements CICDProviderInterface{
 
     async resolveWebhook(request: RequestEntity, deployEntity: DeployEntity): Promise<FunctionResponseDTO<CICDProviderResolveWebhookResponse>> {
         const messages: string[]  = []
+
         let status: DeployStatus = DeployStatus.processing;
 
         if (request.body.type === "job-completed") {
@@ -91,6 +92,7 @@ export default class CircleCI implements CICDProviderInterface{
             messages.push(`Triggered By: *${deployEntity.user.name}*`);
             messages.push(`Status: *${request.body.workflow.status}*`);
         }
+
 
         return {
             data: {
