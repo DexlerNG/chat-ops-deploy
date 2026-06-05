@@ -189,26 +189,26 @@ export const processWebhook = async (request: RequestEntity) => {
         pipelineId: getPipelineIdFromWebhookResponse.data
     });
 
-    if (!deployEntity && ["github-actions", "github"].includes(CICDProvider)) {
-        const repositoryName = request.body?.repository?.name;
-        const branch = request.body?.workflow_run?.head_branch || request.body?.workflow_job?.head_branch;
-
-        if (repositoryName && branch) {
-            deployEntity = await deployRepository.findOne({
-                CICDProvider,
-                service: repositoryName,
-                branch,
-                status: DeployStatus.processing
-            });
-
-            if (deployEntity && getPipelineIdFromWebhookResponse.data) {
-                deployEntity = await deployRepository.findOneAndUpdate({_id: deployEntity._id}, {
-                    pipelineId: getPipelineIdFromWebhookResponse.data,
-                    pipelineNumber: String(request.body?.workflow_run?.run_number || request.body?.workflow_job?.run_id || deployEntity.pipelineNumber || "")
-                });
-            }
-        }
-    }
+    // if (!deployEntity && ["github-actions", "github"].includes(CICDProvider)) {
+    //     const repositoryName = request.body?.repository?.name;
+    //     const branch = request.body?.workflow_run?.head_branch || request.body?.workflow_job?.head_branch;
+    //
+    //     if (repositoryName && branch) {
+    //         deployEntity = await deployRepository.findOne({
+    //             CICDProvider,
+    //             service: repositoryName,
+    //             branch,
+    //             status: DeployStatus.processing
+    //         });
+    //
+    //         if (deployEntity && getPipelineIdFromWebhookResponse.data) {
+    //             deployEntity = await deployRepository.findOneAndUpdate({_id: deployEntity._id}, {
+    //                 pipelineId: getPipelineIdFromWebhookResponse.data,
+    //                 pipelineNumber: String(request.body?.workflow_run?.run_number || request.body?.workflow_job?.run_id || deployEntity.pipelineNumber || "")
+    //             });
+    //         }
+    //     }
+    // }
 
     if (!deployEntity) {
         console.log("error", {
