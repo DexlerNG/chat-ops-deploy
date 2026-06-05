@@ -149,23 +149,34 @@ export const processCommand = async (request: RequestEntity) => {
 
 export const processWebhook = async (request: RequestEntity) => {
 
-    console.log("Broker Payload", JSON.stringify(request.body), request.params);
+    console.log("Webhoook", JSON.stringify(request.body), request.params);
 
     const CICDProvider = request.params.CICDProvider || env.defaultCICDProvider;
 
     const CICDInterface = DeployFactory.getCICDProviderImplementation(CICDProvider);
 
     if (!CICDInterface) {
-        return {
+        console.log("error", {
             error: `Oops, CICD Provider "${CICDProvider}" is not supported`,
-            statusCode: 400
+            statusCode: 404
+        });
+
+        return {
+            data: "processed",
+            statusCode: 200
         }
     }
 
     const getPipelineIdFromWebhookResponse = await CICDInterface.getPipelineIdFromWebhook(request);
     if (getPipelineIdFromWebhookResponse.error) {
+        console.log("error", {
+            error: getPipelineIdFromWebhookResponse.error,
+            statusCode: 404
+        });
+
         return {
-            error: getPipelineIdFromWebhookResponse.error
+            data: "processed",
+            statusCode: 200
         }
     }
 
@@ -174,10 +185,36 @@ export const processWebhook = async (request: RequestEntity) => {
         pipelineId: getPipelineIdFromWebhookResponse.data
     });
 
+    // if (!deployEntity && ["github-actions", "github"].includes(CICDProvider)) {
+    //     const repositoryName = request.body?.repository?.name;
+    //     const branch = request.body?.workflow_run?.head_branch || request.body?.workflow_job?.head_branch;
+    //
+    //     if (repositoryName && branch) {
+    //         deployEntity = await deployRepository.findOne({
+    //             CICDProvider,
+    //             service: repositoryName,
+    //             branch,
+    //             status: DeployStatus.processing
+    //         });
+    //
+    //         if (deployEntity && getPipelineIdFromWebhookResponse.data) {
+    //             deployEntity = await deployRepository.findOneAndUpdate({_id: deployEntity._id}, {
+    //                 pipelineId: getPipelineIdFromWebhookResponse.data,
+    //                 pipelineNumber: String(request.body?.workflow_run?.run_number || request.body?.workflow_job?.run_id || deployEntity.pipelineNumber || "")
+    //             });
+    //         }
+    //     }
+    // }
+
     if (!deployEntity) {
-        return {
+        console.log("error", {
             error: `Oops, Deployment with pipelineId "${getPipelineIdFromWebhookResponse.data}" not found`,
             statusCode: 404
+        });
+
+        return {
+            data: "processed",
+            statusCode: 200
         }
     }
 
@@ -191,8 +228,12 @@ export const processWebhook = async (request: RequestEntity) => {
 
     const webhookResponse = await CICDInterface.resolveWebhook(request, deployEntity);
     if (webhookResponse.error) {
-        return {
+        console.log("error", {
             error: webhookResponse.error
+        });
+        return {
+            data: "processed",
+            statusCode: 200
         }
     }
 
@@ -212,13 +253,20 @@ export const processWebhook = async (request: RequestEntity) => {
         }
     }
 
-    chatInterface.sendMessage({
+    console.log("Result", {
         messageId: deployEntity.messageId,
         channel: deployEntity.channel,
         threadId: deployEntity.threadId
     }, webhookResponse.data.message)
-        .catch(console.log);
 
+    if(webhookResponse.data.message){
+        chatInterface.sendMessage({
+            messageId: deployEntity.messageId,
+            channel: deployEntity.channel,
+            threadId: deployEntity.threadId
+        }, webhookResponse.data.message)
+            .catch(console.log);
+    }
 
     return {
         data: "processed"
