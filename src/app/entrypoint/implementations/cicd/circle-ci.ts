@@ -34,8 +34,13 @@ export default class CircleCI implements CICDProviderInterface{
     }
 
     async getPipelineIdFromWebhook(request: RequestEntity): Promise<FunctionResponseDTO<string>> {
+        if(!request.body?.pipeline?.id ) {
+            return {
+                error: "Not CircleCI"
+            }
+        }
         return {
-            data: request.body.pipeline.id
+            data: request.body?.pipeline?.id
         }
     }
 
