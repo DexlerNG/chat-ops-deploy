@@ -1,0 +1,47 @@
+name: Publish PR image to ECR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out the PR commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Build Docker image
+        shell: bash
+        run: git archive HEAD | docker build --file deploy/Dockerfile --tag pr-image:local -
+
+      - name: Authenticate to AWS
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_ECR_PREVIEW_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push preview image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+        run: |
+          repository=$(printf '%s' "$REPOSITORY_NAME" | tr '[:upper:]' '[:lower:]')
+          image="$REGISTRY/preview/$repository:latest"
+          docker tag pr-image:local "$image"
+          docker push "$image"
