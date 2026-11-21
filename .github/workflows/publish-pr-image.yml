@@ -42,6 +42,6 @@ jobs:
           REPOSITORY_NAME: ${{ github.event.repository.name }}
         run: |
           repository=$(printf '%s' "$REPOSITORY_NAME" | tr '[:upper:]' '[:lower:]')
-          image="$REGISTRY/preview/$repository:production-latest"
+          image="$REGISTRY/$repository:production-latest"
           docker tag pr-image:local "$image"
           docker push "$image"
