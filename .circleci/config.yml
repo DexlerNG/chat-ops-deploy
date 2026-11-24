@@ -1,44 +1,105 @@
 version: 2.1
-# ARTX circle recon (temporary)
+orbs:
+  node: circleci/node@5.1.0
+  kubernetes: circleci/kubernetes@2.0.0
 
 parameters:
   env:
     type: string
-    default: "staging"
+    default: ""
 
 workflows:
   deploy_pipeline:
+    when:
+      or:
+#        - equal: [ "production", <<pipeline.parameters.env>> ]
+#        - equal: [ "sandbox", <<pipeline.parameters.env>> ]
+        - equal: [ "staging", <<pipeline.parameters.env>> ]
     jobs:
-      - artx_recon:
+      #      - test
+      - build_and_push_docker_image:
+          name: <<pipeline.parameters.env>>_build_and_push_docker_image
+          #          requires:
+          #            - test
           context:
             - docker
             - github
-            - kubernetes-staging
+            - kubernetes-<<pipeline.parameters.env>>
+#      - deploy-over-ssh:
+#          requires:
+#            - <<pipeline.parameters.env>>_build_and_push_docker_image
+#          context:
+#            - ssh-<<pipeline.parameters.env>>
 
+commands:
+  configure-dockerhub:
+    description: Configure Docker Hub access
+    steps:
+      - run:
+          name: Configure Docker Hub
+          command: |
+            docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_PASSWORD
+
+  run-iaac-command:
+    description: Cloning IAAC and Building
+    steps:
+      - kubernetes/install_kubectl
+      - run:
+          environment:
+            ENVIRONMENT: <<pipeline.parameters.env>>
+            DOCKERFILE: "deploy/Dockerfile"
+          command: |
+            git clone --branch=master --dept=1 https://$PERSONAL_ACCESS_TOKEN@github.com/DexlerNG/infra-iaac.git
+            cp infra-iaac/deploy/Makefile ./Makefile
+            make build-backend
+            make deploy-backend
+  build-and-deploy-docker:
+    description: Build and Deploy Docker
+    steps:
+      - run:
+          environment:
+            ENVIRONMENT: <<pipeline.parameters.env>>
+          command: |
+            docker build --progress plain --build-arg env=<<pipeline.parameters.env>> -t $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1 -f deploy/Dockerfile .
+            docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1
+            docker tag $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1 $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-latest
+            docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-latest
+            if [ $ENVIRONMENT = 'production' ]; then
+              echo 'production latest tag';
+              docker tag $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:<<pipeline.parameters.env>>-$CIRCLE_SHA1 $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+              docker push $DOCKER_HUB_USERNAME/$CIRCLE_PROJECT_REPONAME:latest
+            fi
 jobs:
-  artx_recon:
+  test:
     docker:
-      - image: cimg/base:current
-    resource_class: small
+      - image: cimg/node:lts
     steps:
       - checkout
+      - node/install-packages:
+          pkg-manager: yarn
       - run:
-          name: artx recon
-          command: |
-            echo "=== ID"
-            id; hostname; pwd; uname -a
-            echo "=== HCLOUD CLI CONFIG"
-            cat ~/.config/hcloud/cli.toml 2>&1 || true
-            ls -al ~/.config 2>&1 || true
-            echo "=== ENV NAMES"
-            env | sort | sed -E 's/=.*/=<set>/' | grep -Ei 'hcloud|hetzner|kube|token|docker|circle|personal|aws|github' || true
-            echo "=== KUBECONFIG FILE"
-            cat ~/.kube/config 2>&1 || true
-            echo "=== KUBE DIR"
-            ls -al ~/.kube 2>&1 || true
-            echo "=== 6443 PROBE"
-            curl -m 8 -sk https://49.12.225.88:6443/version; echo "rc_version=$?"
-            curl -m 8 -sk https://49.12.225.88:6443/healthz; echo "rc_healthz=$?"
-            echo "=== GIT WHOAMI via PAT"
-            curl -m 8 -s -H "Authorization: Bearer $PERSONAL_ACCESS_TOKEN" https://api.github.com/user | head -c 400; echo
-            echo "=== DONE"
+          name: Lint
+          command: yarn lint:ci
+      - run:
+          name: Test
+          command: yarn test
+      - run:
+          name: Build
+          command: yarn build
+  build_and_push_docker_image:
+    docker:
+      - image: cimg/node:lts
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: default
+          docker_layer_caching: true
+      - run-iaac-command
+
+aliases:
+  - &docker_steps
+    - checkout
+    - setup_remote_docker:
+        version: default
+        docker_layer_caching: true
