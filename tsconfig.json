@@ -2,6 +2,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es6",
+    "resolveJsonModule": true,
     "allowJs": true,
     "sourceMap": true,
     "checkJs": true,
@@ -10,7 +11,10 @@
     "esModuleInterop": true,
     "incremental": true,
     "types": ["node", "jest"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
   "$schema": "https://json.schemastore.org/tsconfig",
   "display": "Recommended",

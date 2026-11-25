@@ -2,6 +2,8 @@
 
 import {RequestEntity} from "../../common/entities";
 import DeployFactory from "./implementations";
+import {reportGitHubDelivery} from "./actions/report-github-delivery";
+import {createHash} from "crypto";
 import env from "../../common/env";
 import logger from "../../common/logger";
 import deployRepository from "./repository";
@@ -9,7 +11,6 @@ import {DeployEntity, DeployStatus} from "./entity";
 import * as messageAction from "./actions/message.action";
 import {SendMessageParams} from "./dto";
 export const processCommand = async (request: RequestEntity) => {
-    logger.info("Request Data", request.body);
 
     request.params.chatProvider = request.params.chatProvider || env.defaultChatProvider;
     request.params.CICDProvider = request.params.CICDProvider || env.defaultCICDProvider;
@@ -23,7 +24,6 @@ export const processCommand = async (request: RequestEntity) => {
             statusCode: 400
         }
     }
-
 
     const verificationResponse = await chatInterface.processVerification(request);
 
@@ -44,14 +44,12 @@ export const processCommand = async (request: RequestEntity) => {
     //process command should return the following to be passed to the circle-ci provider: env, branch, service
     const chatProcessCommandResponse = await chatInterface.getMessageContent(request);
 
-    console.log("chatProcessCommandResponse", JSON.stringify(chatProcessCommandResponse));
     if (chatProcessCommandResponse.error) {
         return {
             error: chatProcessCommandResponse.error,
             statusCode: chatProcessCommandResponse.statusCode || 400
         }
     }
-
 
     const processMessageResult = await messageAction.processMessage(chatProcessCommandResponse.data);
 
@@ -61,10 +59,8 @@ export const processCommand = async (request: RequestEntity) => {
         channel: chatProcessCommandResponse.data.channel,
     };
 
-    console.log("processMessageResult", JSON.stringify(processMessageResult));
-
     if(processMessageResult.error){
-        // await chatInterface.sendMessage(channelParams, processMessageResult.error);
+        if (/^(deploy|smoke)\b/i.test(chatProcessCommandResponse.data.content.trim())) await chatInterface.sendMessage(channelParams, processMessageResult.error);
 
         return {
             data: "Ok",
@@ -79,6 +75,12 @@ export const processCommand = async (request: RequestEntity) => {
         }
     }
 
+    if (/^smoke\b/i.test(chatProcessCommandResponse.data.content.trim())) {
+        request.params.CICDProvider = process.env.SMOKE_CICD_PROVIDER || "circleci";
+    }
+    if (processMessageResult.data.service !== "payfonte-e2e" && request.params.CICDProvider !== "github") {
+        return {error: "Registered releases use GitHub Actions", statusCode: 403};
+    }
     const CICDInterface = DeployFactory.getCICDProviderImplementation(request.params.CICDProvider);
 
     if (!CICDInterface) {
@@ -88,18 +90,12 @@ export const processCommand = async (request: RequestEntity) => {
         }
     }
 
-    const checkIfMessageHasBeenProcessed = await deployRepository.countDocuments({
-        chatProvider: request.params.chatProvider,
-        messageId: chatProcessCommandResponse.data.messageId,
-    });
-    console.log("checkIfMessageHasBeenProcessed", checkIfMessageHasBeenProcessed);
-
-    if(checkIfMessageHasBeenProcessed) return {
-        data: "processed",
-        statusCode: 200
-    };
-
     let deployEntity: DeployEntity = {
+        _id: createHash("sha256").update("slack:" + request.body.team_id + ":" + request.body.event_id).digest("hex").slice(0, 24),
+        releaseId: request.body.event_id,
+        dispatchState: "pending",
+        workspaceId: request.body.team_id,
+        actorId: chatProcessCommandResponse.data.user.id,
         chatProvider: request.params.chatProvider,
         repoProvider: request.params.repoProvider,
         CICDProvider: request.params.CICDProvider,
@@ -116,15 +112,20 @@ export const processCommand = async (request: RequestEntity) => {
         user: chatProcessCommandResponse.data.user,
     }
 
-    deployEntity = await deployRepository.create(deployEntity);
+    try {
+        deployEntity = await deployRepository.create(deployEntity);
+    } catch (error) {
+        if (!(error.code === 11000 && error.keyPattern?._id)) throw error;
+    }
 
-
+    const claimed = await deployRepository.findOneAndUpdate({_id: deployEntity._id, dispatchState:"pending"}, {dispatchState:"dispatching"});
+    if (!claimed) return {data:"already accepted", statusCode:200};
     const CICDResponse = await CICDInterface.processDeploymentCommand(deployEntity);
 
     if (CICDResponse.error) {
+        await deployRepository.findOneAndUpdate({_id: deployEntity._id, dispatchState:"dispatching"}, {dispatchState:"unconfirmed"});
         chatInterface.sendMessage(channelParams, CICDResponse.error)
             .catch(console.log);
-
 
         return {
             error: CICDResponse.error,
@@ -133,6 +134,7 @@ export const processCommand = async (request: RequestEntity) => {
     }
 
     deployEntity = await deployRepository.findOneAndUpdate({_id: deployEntity._id}, {
+        dispatchState: "dispatched",
         pipelineId: CICDResponse.data.pipelineId,
         pipelineNumber: CICDResponse.data.pipelineNumber
     });
@@ -149,74 +151,54 @@ export const processCommand = async (request: RequestEntity) => {
 
 export const processWebhook = async (request: RequestEntity) => {
 
-    console.log("Webhoook", JSON.stringify(request.body), request.params);
-
     const CICDProvider = request.params.CICDProvider || env.defaultCICDProvider;
+
+    if (CICDProvider === "github") {
+        const notification = await reportGitHubDelivery(request);
+        if (notification) return notification;
+    }
 
     const CICDInterface = DeployFactory.getCICDProviderImplementation(CICDProvider);
 
     if (!CICDInterface) {
-        console.log("error", {
-            error: `Oops, CICD Provider "${CICDProvider}" is not supported`,
-            statusCode: 404
-        });
-
         return {
-            data: "processed",
-            statusCode: 200
+            error: `Oops, CICD Provider "${CICDProvider}" is not supported`,
+            statusCode: 400
         }
     }
 
     const getPipelineIdFromWebhookResponse = await CICDInterface.getPipelineIdFromWebhook(request);
     if (getPipelineIdFromWebhookResponse.error) {
-        console.log("error", {
-            error: getPipelineIdFromWebhookResponse.error,
-            statusCode: 404
-        });
-
         return {
-            data: "processed",
-            statusCode: 200
+            error: getPipelineIdFromWebhookResponse.error
         }
     }
 
-
     let deployEntity: DeployEntity = await deployRepository.findOne({
+        CICDProvider,
         pipelineId: getPipelineIdFromWebhookResponse.data
     });
 
-    // if (!deployEntity && ["github-actions", "github"].includes(CICDProvider)) {
-    //     const repositoryName = request.body?.repository?.name;
-    //     const branch = request.body?.workflow_run?.head_branch || request.body?.workflow_job?.head_branch;
-    //
-    //     if (repositoryName && branch) {
-    //         deployEntity = await deployRepository.findOne({
-    //             CICDProvider,
-    //             service: repositoryName,
-    //             branch,
-    //             status: DeployStatus.processing
-    //         });
-    //
-    //         if (deployEntity && getPipelineIdFromWebhookResponse.data) {
-    //             deployEntity = await deployRepository.findOneAndUpdate({_id: deployEntity._id}, {
-    //                 pipelineId: getPipelineIdFromWebhookResponse.data,
-    //                 pipelineNumber: String(request.body?.workflow_run?.run_number || request.body?.workflow_job?.run_id || deployEntity.pipelineNumber || "")
-    //             });
-    //         }
-    //     }
-    // }
-
-    if (!deployEntity) {
-        console.log("error", {
-            error: `Oops, Deployment with pipelineId "${getPipelineIdFromWebhookResponse.data}" not found`,
-            statusCode: 404
-        });
-
-        return {
-            data: "processed",
-            statusCode: 200
+    if (CICDProvider === "github") {
+        const run = request.body.workflow_run;
+        const repo = request.body.repository;
+        const releaseId = /^Slack release (Ev[A-Za-z0-9]+)$/.exec(run?.display_title || "")?.[1];
+        if (!env.githubReleaseBot || run?.actor?.login !== env.githubReleaseBot || !releaseId ||
+            repo?.owner?.login !== env.githubOwner || run?.event !== "workflow_dispatch" ||
+            run.head_branch !== repo.default_branch || run.path !== ".github/workflows/slack-release.yml") {
+            return {error:"Unexpected release workflow identity", statusCode:403};
         }
+        if (!deployEntity) {
+            // A signed GitHub event can recover a successful dispatch whose response was lost.
+            deployEntity = await deployRepository.findOneAndUpdate({
+                CICDProvider, releaseId, service:repo.name, pipelineId:"",
+                dispatchState:{$in:["dispatching","unconfirmed"]}
+            }, {dispatchState:"dispatched", pipelineId:String(run.id), pipelineNumber:String(run.run_number)});
+        }
+        if (!deployEntity || deployEntity.service!==repo.name || deployEntity.releaseId!==releaseId)
+            return {error:"Release audit mismatch",statusCode:403};
     }
+    if (!deployEntity) return {error:"Unknown pipeline",statusCode:404};
 
     if(deployEntity.status == DeployStatus.completed){
         return {
@@ -225,15 +207,10 @@ export const processWebhook = async (request: RequestEntity) => {
         }
     }
 
-
     const webhookResponse = await CICDInterface.resolveWebhook(request, deployEntity);
     if (webhookResponse.error) {
-        console.log("error", {
-            error: webhookResponse.error
-        });
         return {
-            data: "processed",
-            statusCode: 200
+            error: webhookResponse.error
         }
     }
 
@@ -253,20 +230,12 @@ export const processWebhook = async (request: RequestEntity) => {
         }
     }
 
-    console.log("Result", {
+    chatInterface.sendMessage({
         messageId: deployEntity.messageId,
         channel: deployEntity.channel,
         threadId: deployEntity.threadId
     }, webhookResponse.data.message)
-
-    if(webhookResponse.data.message){
-        chatInterface.sendMessage({
-            messageId: deployEntity.messageId,
-            channel: deployEntity.channel,
-            threadId: deployEntity.threadId
-        }, webhookResponse.data.message)
-            .catch(console.log);
-    }
+        .catch(console.log);
 
     return {
         data: "processed"

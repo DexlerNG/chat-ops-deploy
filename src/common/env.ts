@@ -19,6 +19,11 @@ const env = {
 
   //SLACK
   slackURL: process.env.SLACK_BASE_URL || "https://slack.com",
+  slackSigningSecret: process.env.SLACK_SIGNING_SECRET || "",
+  slackWorkspace: process.env.SLACK_WORKSPACE_ID || "",
+  slackDeployChannel: process.env.SLACK_DEPLOY_CHANNEL_ID || "",
+  githubReleaseBot: process.env.GITHUB_RELEASE_BOT_LOGIN || "",
+  githubWebhookSecret: process.env.GITHUB_WEBHOOK_SECRET || "",
   slackToken: process.env.SLACK_TOKEN,
 
 
@@ -26,6 +31,13 @@ const env = {
   circleciBaseURL: process.env.CIRCLE_CI_BASE_URL || "https://circleci.com",
   circleciToken: process.env.CIRCLE_CI_TOKEN,
   circleciOrg: process.env.CIRCLE_CI_ORG,
+
+  //GitHub
+  githubBaseURL: process.env.GITHUB_BASE_URL || "https://api.github.com",
+  githubToken: process.env.GITHUB_TOKEN,
+  githubOwner: process.env.GITHUB_OWNER,
+  githubWorkflowId: process.env.GITHUB_WORKFLOW_ID,
+  githubApiVersion: process.env.GITHUB_API_VERSION || "2022-11-28",
 
 
   defaultChatProvider: process.env.DEFAULT_CHAT_PROVIDER,

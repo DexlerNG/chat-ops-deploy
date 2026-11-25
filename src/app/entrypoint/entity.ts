@@ -1,6 +1,7 @@
 
 export enum DeployStatus {
     processing = "processing",
+    published = "published",
     failed = "failed",
     completed = "completed"
 }
