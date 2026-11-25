@@ -20,3 +20,15 @@ it('rejects traversal and ambiguous refs before release dispatch',async()=>{
     expect((await message('deploy user-service staging '+ref)).statusCode).toBe(422);
   }
 });
+
+it('redirects migrated services to GitHub while preserving the smoke command',async()=>{
+  const previous = process.env.PR_DELIVERY_SERVICES;
+  process.env.PR_DELIVERY_SERVICES = 'user-service';
+  try {
+    expect((await message('deploy user-service staging master')).error).toMatch(/GitHub/);
+    expect((await message('smoke staging')).data?.service).toBe('payfonte-e2e');
+  } finally {
+    if (previous === undefined) delete process.env.PR_DELIVERY_SERVICES;
+    else process.env.PR_DELIVERY_SERVICES = previous;
+  }
+});

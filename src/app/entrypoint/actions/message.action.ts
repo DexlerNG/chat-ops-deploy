@@ -19,6 +19,9 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
         }
     }
     if(params[0].toLowerCase() === "deploy" && params.length === 4){
+        if ((process.env.PR_DELIVERY_SERVICES || "").split(",").includes(params[1])) {
+            return {error: "This service deploys through GitHub pull requests. Use smoke to check a deployment.", statusCode: 200};
+        }
         deployParams = {
             service: params?.[1],
             env: params?.[2],

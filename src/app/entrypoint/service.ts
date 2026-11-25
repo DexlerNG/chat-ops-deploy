@@ -2,6 +2,7 @@
 
 import {RequestEntity} from "../../common/entities";
 import DeployFactory from "./implementations";
+import {reportGitHubDelivery} from "./actions/report-github-delivery";
 import {createHash} from "crypto";
 import env from "../../common/env";
 import logger from "../../common/logger";
@@ -151,6 +152,11 @@ export const processCommand = async (request: RequestEntity) => {
 export const processWebhook = async (request: RequestEntity) => {
 
     const CICDProvider = request.params.CICDProvider || env.defaultCICDProvider;
+
+    if (CICDProvider === "github") {
+        const notification = await reportGitHubDelivery(request);
+        if (notification) return notification;
+    }
 
     const CICDInterface = DeployFactory.getCICDProviderImplementation(CICDProvider);
 

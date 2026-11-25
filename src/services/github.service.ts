@@ -106,3 +106,8 @@ export const triggerWorkflowDispatch = async (payload: TriggerGithubWorkflowDisp
         return {error: "GitHub release dispatch failed", statusCode: status || 502};
     }
 };
+
+export async function getDeliveryJobs(service: string, runId: number, attempt: number): Promise<Array<{name: string; conclusion: string}>> {
+    const {data} = await _axios.get(`/repos/${env.githubOwner}/${service}/actions/runs/${runId}/attempts/${attempt}/jobs`, {params:{per_page:100}});
+    return data.jobs;
+}
