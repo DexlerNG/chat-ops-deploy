@@ -20,8 +20,8 @@ export async function reportGitHubDelivery(request: RequestEntity): Promise<Func
         const jobs = await getDeliveryJobs(repo.name, run.id, run.run_attempt);
         const results: string[] = [];
         for (const job of jobs) {
-            const leg = /(?:^| \/ )Verify (staging|sandbox|production|preview-[a-z0-9-]+) ([0-9a-f]{40})$/.exec(job.name);
-            if (leg && job.conclusion !== "skipped") results.push(`${leg[1]} · ${leg[2].slice(0, 12)} · ${job.conclusion === "success" ? "healthy" : job.conclusion}`);
+            const leg = /(?:^| \/ )Submit (staging|sandbox|production|preview-[a-z0-9-]+) ([0-9a-f]{40})$/.exec(job.name);
+            if (leg && job.conclusion !== "skipped") results.push(`${leg[1]} · ${leg[2].slice(0, 12)} · ${job.conclusion === "success" ? "submitted to Argo CD" : job.conclusion}`);
         }
         if (run.conclusion === "failure") results.push("Delivery failed. See the run for the failed step.");
         if (!results.length) return {data:"ignored",statusCode:200};
