@@ -14,3 +14,9 @@ it('rejects unknown targets, uncommissioned production and prefix matches', asyn
 it('preserves the existing smoke default branch',async()=>{
   expect((await message('smoke staging')).data).toEqual({service:'payfonte-e2e',env:'staging',branch:'master'});
 });
+
+it('rejects traversal and ambiguous refs before release dispatch',async()=>{
+  for(const ref of ['../main','a//b','feature/.hidden','a.lock','main?test','-option']){
+    expect((await message('deploy user-service staging '+ref)).statusCode).toBe(422);
+  }
+});

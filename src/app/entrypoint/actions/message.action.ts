@@ -67,6 +67,13 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
     }
 
 
+    // Accept internal branch paths and reject ambiguous Git reference components.
+    const branch = deployParams.branch;
+    if (!/^[A-Za-z0-9_][A-Za-z0-9._/-]*$/.test(branch) || branch.includes("..") ||
+        branch.endsWith(".") || branch.split("/").some(part => !part || part.startsWith(".") || part.endsWith(".lock"))) {
+        return {error: "Invalid internal branch name", statusCode: 422};
+    }
+
     // Only operator-registered service/target pairs are eligible, including named frontend slots.
     const registry = JSON.parse(process.env.SLACK_RELEASE_TARGETS_JSON || "{}");
     const targets = Object.prototype.hasOwnProperty.call(registry, deployParams.service) && registry[deployParams.service];
