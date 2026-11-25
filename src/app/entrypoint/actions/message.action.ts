@@ -8,7 +8,7 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
 
     let deployParams: ExecuteDeployCommandDTO;
 
-    const params: string[] = chatProviderMessageContent.content.split(" ");
+    const params: string[] = chatProviderMessageContent.content.trim().split(/\s+/);
     if (chatProviderMessageContent.content.toLowerCase().trim().startsWith("error")){
         return {
             data: {
@@ -18,7 +18,7 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
             }
         }
     }
-    if(chatProviderMessageContent.content.toLowerCase().trim().startsWith("deploy")){
+    if(params[0].toLowerCase() === "deploy" && params.length === 4){
         deployParams = {
             service: params?.[1],
             env: params?.[2],
@@ -26,7 +26,7 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
         };
     }
 
-    if(chatProviderMessageContent.content.toLowerCase().trim().startsWith("smoke")){
+    if(params[0].toLowerCase() === "smoke" && (params.length === 2 || params.length === 3)){
         deployParams = {
             service: "payfonte-e2e",
             env: params?.[1],
@@ -67,6 +67,12 @@ export async function processMessage(chatProviderMessageContent: ChatProviderMes
     }
 
 
+    // Only operator-registered service/target pairs are eligible, including named frontend slots.
+    const registry = JSON.parse(process.env.SLACK_RELEASE_TARGETS_JSON || "{}");
+    const targets = Object.prototype.hasOwnProperty.call(registry, deployParams.service) && registry[deployParams.service];
+    if (!Array.isArray(targets) || !targets.includes(deployParams.env)) {
+        return {error: "Unregistered deployment service or target", statusCode: 403};
+    }
     return {
         data: deployParams,
         statusCode: 200

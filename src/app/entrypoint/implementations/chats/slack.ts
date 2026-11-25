@@ -12,6 +12,9 @@ import {
 } from "../../dto";
 import * as slackService from "../../../../services/slack.service";
 
+import env from "../../../../common/env";
+import { isFullWorkspaceMember } from "../../actions/release-auth";
+
 export default class Slack implements ChatProviderInterface {
     async processVerification(request: RequestEntity): Promise<FunctionResponseDTO<string>> {
         if (request.body.type == "url_verification") {
@@ -42,17 +45,10 @@ export default class Slack implements ChatProviderInterface {
 
         //get user
         const slackUserResponse = await slackService.getUserInfo(request.body.event.user);
-        logger.info("slackUser", slackUserResponse);
-
-
-        if(slackUserResponse.error) {
-            logger.info("slackUser", slackUserResponse);
+        if (slackUserResponse.error || !isFullWorkspaceMember(slackUserResponse.data, env.slackWorkspace, request.body.event.user)) {
+            return {error: "A full member of the deployment workspace is required", statusCode: 403};
         }
-
-        let user: any = {
-            name: slackUserResponse.data?.real_name || "anonymous",
-            id: slackUserResponse.data?.id || "anonymous"
-        };
+        const user = {name: slackUserResponse.data.real_name, id: slackUserResponse.data.id};
 
         return {
             data: {
